@@ -9,10 +9,8 @@ export interface Member {
 }
 
 export enum MemberStatus {
-  NON_MEMBER = 0,
   ACTIVE_MEMBER = 1,
   INACTIVE_MEMBER = 2,
-  SUSPENDED_MEMBER = 3,
 }
 
 export interface Loan {

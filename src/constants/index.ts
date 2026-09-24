@@ -10,11 +10,12 @@ export const DAO_CONSTANTS = {
 } as const
 
 export const MEMBER_STATUS_LABELS = {
-  0: 'Non-Member',
   1: 'Active Member',
   2: 'Inactive Member',
-  3: 'Suspended Member',
 } as const
+
+// A non-member has no contract record at all, so there is no status code for it.
+export const NON_MEMBER_LABEL = 'Non-Member'
 
 export const PROPOSAL_STATUS_LABELS = {
   0: 'Pending',

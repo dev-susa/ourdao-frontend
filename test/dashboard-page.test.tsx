@@ -124,6 +124,24 @@ describe('DashboardPage', () => {
     expect(screen.queryByText('Admin Panel')).not.toBeInTheDocument()
   })
 
+  it.each([
+    ['ActiveMember', 'Status: Active Member'],
+    ['Inactive', 'Status: Inactive Member'],
+  ])('labels a %s member as "%s"', async (status, label) => {
+    mockGetMember.mockResolvedValue(member({ status }))
+    renderWithProviders(<DashboardPage />)
+
+    await waitFor(() => expect(screen.getByText(label)).toBeInTheDocument())
+  })
+
+  it('labels a missing member record as Non-Member rather than an unrelated status', async () => {
+    mockGetMember.mockResolvedValue(null)
+    renderWithProviders(<DashboardPage />)
+
+    await waitFor(() => expect(screen.getByText('Quick Actions')).toBeInTheDocument())
+    expect(screen.getByText('Status: Non-Member')).toBeInTheDocument()
+  })
+
   it('empty state: hides the rewards section when there is nothing to claim', async () => {
     mockGetPendingYield.mockResolvedValue(BigInt(0))
     renderWithProviders(<DashboardPage />)
