@@ -1,4 +1,4 @@
-import { IPFS_GATEWAY } from '@/constants'
+import { IPFS_GATEWAY, IPFS_GATEWAYS, IPFS_GATEWAY_TIMEOUT_MS } from '@/constants'
 
 // PBKDF2 iteration count per OWASP guidance (as of 2024).
 // Raised from 100,000 to provide protection against offline brute-force attacks
@@ -199,10 +199,25 @@ export async function uploadToIPFS(
   }
 }
 
-// TODO #145: IPFS gateway read has no timeout (see uploadToIPFS comment for details).
-// This is the worst of the three fetches — public gateways are routinely slow or
-// unresponsive. Without a timeout, DocumentViewer spins indefinitely with no error.
-// Improvement: Apply AbortSignal.timeout(GATEWAY_READ_TIMEOUT_MS) here.
+// Public gateways rate-limit, go down and stall, so each configured gateway is
+// tried in order with a timeout; a timeout, network error or non-2xx response
+// moves on to the next one instead of hanging DocumentViewer.
+async function fetchFromGateways(hash: string): Promise<Response> {
+  let lastError: Error | undefined
+  for (const gateway of IPFS_GATEWAYS) {
+    try {
+      const res = await fetch(`${gateway}${hash}`, {
+        signal: AbortSignal.timeout(IPFS_GATEWAY_TIMEOUT_MS),
+      })
+      if (res.ok) return res
+      lastError = new Error(`Failed to fetch document from IPFS gateway (${res.status})`)
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err))
+    }
+  }
+  throw lastError ?? new Error('No IPFS gateway configured')
+}
+
 // IPFS download with decryption, read straight from the public gateway — no
 // credential needed for reads.
 export async function downloadFromIPFS(
@@ -210,10 +225,7 @@ export async function downloadFromIPFS(
   encrypted: boolean = false,
   password?: string
 ): Promise<{ content: Uint8Array; decrypted: boolean }> {
-  const res = await fetch(`${IPFS_GATEWAY}${hash}`)
-  if (!res.ok) {
-    throw new Error(`Failed to fetch document from IPFS gateway (${res.status})`)
-  }
+  const res = await fetchFromGateways(hash)
   const fileData = new Uint8Array(await res.arrayBuffer())
 
   if (encrypted && password) {

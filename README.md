@@ -58,7 +58,7 @@ All config is env-driven with public-testnet defaults (see `.env.example`):
 | `NEXT_PUBLIC_CONTRACT_ID` | Deployed OurDAO contract id (`C…`) | _(empty → read-only "not configured")_ |
 | `NEXT_PUBLIC_SOROBAN_RPC_URL` | Soroban RPC endpoint | `https://soroban-testnet.stellar.org` |
 | `NEXT_PUBLIC_NETWORK_PASSPHRASE` | Network passphrase | testnet |
-| `NEXT_PUBLIC_IPFS_GATEWAY` | Gateway for reading document content hashes (no credential needed) | Pinata |
+| `NEXT_PUBLIC_IPFS_GATEWAY` | Gateway(s) for reading document content hashes (no credential needed); comma-separate several to fall back in order | Pinata |
 | `PINATA_JWT` | **Server-only** Pinata credential for pinning uploaded documents — read by `src/app/api/documents/route.ts`, never exposed to the client | _(empty → uploads fail with a visible error)_ |
 | `NEXT_PUBLIC_BACKEND_URL` | [`ourdao-backend`](https://github.com/ourdao/ourdao-backend) indexer/API (loan history, notifications, admin log, events) | _(empty → on-chain-only, no backend)_ — set to `http://localhost:4000` for local dev (see `.env.example`)_ |
 | `NEXT_PUBLIC_SITE_URL` | Public site origin, no trailing slash — used as `metadataBase` so Open Graph/Twitter image URLs resolve to an absolute address | `http://localhost:3000` |

@@ -25,11 +25,15 @@ import type { NextConfig } from "next";
 function buildCsp(): string {
   const rpcUrl = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL || "https://soroban-testnet.stellar.org";
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
-  const ipfsGateway = process.env.NEXT_PUBLIC_IPFS_GATEWAY || "https://gateway.pinata.cloud/ipfs/";
+  // NEXT_PUBLIC_IPFS_GATEWAY may be a comma-separated list of gateways.
+  const ipfsGateways = (process.env.NEXT_PUBLIC_IPFS_GATEWAY || "https://gateway.pinata.cloud/ipfs/")
+    .split(",")
+    .map((g) => g.trim())
+    .filter(Boolean);
 
   const origins = new Set<string>();
 
-  for (const raw of [rpcUrl, backendUrl, ipfsGateway]) {
+  for (const raw of [rpcUrl, backendUrl, ...ipfsGateways]) {
     try {
       const u = new URL(raw);
       origins.add(u.origin);
