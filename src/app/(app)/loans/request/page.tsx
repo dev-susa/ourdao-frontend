@@ -13,8 +13,7 @@ import {
   DocumentIcon
 } from '@heroicons/react/24/outline'
 import { useDAOStats, useUserData, useLoanRequest, useAttachDocument } from '@/hooks/useDAO'
-import { parseToken } from '@/lib/utils'
-import { DAO_CONSTANTS } from '@/constants'
+import { parseToken, formatToken, computeMaxLoan } from '@/lib/utils'
 import dynamic from 'next/dynamic'
 
 // Dynamic import to avoid SSR issues with IPFS
@@ -58,6 +57,13 @@ export default function RequestLoanPage() {
 
   const isPending = isRequestPending || isAttachPending
 
+  // The contract caps a loan at treasury * policy ratio, so derive the cap from
+  // live state; it is unknown until the stats have loaded.
+  const maxLoan = stats.initialized
+    ? computeMaxLoan(stats.treasuryBalance, stats.maxLoanToTreasuryRatio)
+    : null
+  const maxLoanDisplay = maxLoan === null ? null : formatToken(maxLoan, { displayDecimals: 7 })
+
   // Estimated interest is derived from the amount, not synced state — no
   // effect needed, it's just recomputed on every render.
   const estimatedInterest = (() => {
@@ -91,6 +97,11 @@ export default function RequestLoanPage() {
 
     if (!formData.amount || parseFloat(formData.amount) <= 0) {
       toast.error('Please enter a valid loan amount')
+      return
+    }
+
+    if (maxLoan !== null && parseToken(formData.amount) > maxLoan) {
+      toast.error(`Amount exceeds the current maximum loan of ${maxLoanDisplay}`)
       return
     }
 
@@ -147,14 +158,16 @@ export default function RequestLoanPage() {
                   id="amount"
                   step="0.01"
                   min="0.01"
-                  max={DAO_CONSTANTS.MAX_LOAN_AMOUNT}
+                  max={maxLoanDisplay ?? undefined}
                   placeholder="0.00"
                   className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   value={formData.amount}
                   onChange={(e) => handleInputChange('amount', e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Maximum loan amount: {DAO_CONSTANTS.MAX_LOAN_AMOUNT}
+                  {maxLoanDisplay === null
+                    ? 'Maximum loan amount: loading…'
+                    : `Maximum loan amount: ${maxLoanDisplay} (set by the treasury balance and loan policy)`}
                 </p>
               </div>
 

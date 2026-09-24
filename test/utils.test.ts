@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatFileSize, formatToken, parseToken, formatThreshold } from '@/lib/utils'
+import { formatFileSize, formatToken, parseToken, formatThreshold, computeMaxLoan } from '@/lib/utils'
 
 describe('formatToken', () => {
   it('renders a bare "0" for an exact zero value', () => {
@@ -122,5 +122,18 @@ describe('formatFileSize', () => {
   it('rounds to two decimal places', () => {
     // 1500 bytes = 1.464... KB -> 1.46 KB
     expect(formatFileSize(1500)).toBe('1.46 KB')
+  })
+})
+
+describe('computeMaxLoan', () => {
+  it('applies the policy ratio (basis points) to the treasury balance', () => {
+    expect(computeMaxLoan(BigInt(5_000), 2000)).toBe(BigInt(1_000))
+  })
+  it('floors like the contract\'s integer division', () => {
+    expect(computeMaxLoan(BigInt(9_999), 1)).toBe(BigInt(0))
+  })
+  it('is zero for an empty treasury or a zero ratio', () => {
+    expect(computeMaxLoan(BigInt(0), 2000)).toBe(BigInt(0))
+    expect(computeMaxLoan(BigInt(5_000), 0)).toBe(BigInt(0))
   })
 })

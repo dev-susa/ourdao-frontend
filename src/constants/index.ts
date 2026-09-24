@@ -3,7 +3,6 @@ export const DAO_CONSTANTS = {
   VOTING_PERIOD: 7 * 24 * 60 * 60, // 7 days in seconds
   BASIS_POINTS: 10000,
   DEFAULT_CONSENSUS_THRESHOLD: 5100, // 51%
-  MAX_LOAN_AMOUNT: '1000', // in DAO token units
   MIN_INTEREST_RATE: 500, // 5% in basis points
   MAX_INTEREST_RATE: 2000, // 20% in basis points
   DEFAULT_REPAYMENT_TERM: 365 * 24 * 60 * 60, // 1 year in seconds

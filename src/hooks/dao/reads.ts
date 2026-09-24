@@ -71,6 +71,8 @@ export type ExtendedStats = DAOStats & {
   initialized: boolean
   isPaused: boolean
   membershipFee: bigint
+  /** Policy cap on a loan as basis points of the treasury balance. */
+  maxLoanToTreasuryRatio: number
   consensusThreshold: number
   features: {
     ensVoting: boolean
@@ -112,6 +114,10 @@ export function useDAOStats(): ExtendedStats {
     (data?.policy as Record<string, unknown> | undefined)?.membership_contribution
   )
 
+  const maxLoanToTreasuryRatio = Number(
+    (data?.policy as Record<string, unknown> | undefined)?.max_loan_to_treasury_ratio ?? 0
+  )
+
   return {
     totalMembers: Number(data?.totalMembers ?? 0),
     activeMembers: Number(data?.activeMembers ?? 0),
@@ -123,6 +129,7 @@ export function useDAOStats(): ExtendedStats {
     initialized: isContractConfigured() && data?.threshold != null,
     isPaused: !!data?.isPaused,
     membershipFee,
+    maxLoanToTreasuryRatio,
     consensusThreshold: Number(data?.threshold ?? 0),
     // The Soroban port's native modules are always compiled in.
     features: {

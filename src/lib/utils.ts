@@ -44,6 +44,11 @@ export function formatToken(
   }
 }
 
+// Mirrors the contract's cap (loans.rs): treasury * ratio / BASIS_POINTS.
+export function computeMaxLoan(treasury: bigint, ratioBasisPoints: number): bigint {
+  return (treasury * BigInt(ratioBasisPoints)) / BigInt(10000)
+}
+
 // Format dates to readable format
 export function formatDate(timestamp: number | string | Date): string {
   try {
