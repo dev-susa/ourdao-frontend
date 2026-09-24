@@ -23,7 +23,6 @@ export const PROPOSAL_STATUS_LABELS = {
   3: 'Approved',
   4: 'Rejected',
   5: 'Executed',
-  6: 'Cancelled',
   7: 'Awaiting Funds',
 } as const
 

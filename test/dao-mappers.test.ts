@@ -11,7 +11,7 @@ import {
   eventLabel,
 } from '@/lib/dao-mappers'
 import { MemberStatus } from '@/types/dao'
-import { PROPOSAL_STATUS_LABELS } from '@/constants'
+import { PROPOSAL_STATUS_LABELS, PROPOSAL_STATUS_AWAITING_FUNDS } from '@/constants'
 import type { BackendLoan } from '@/lib/backend'
 
 describe('toLoan', () => {
@@ -122,6 +122,11 @@ describe('tag', () => {
 describe('loanStatusCode', () => {
   it('maps Approved status to 3', () => {
     expect(loanStatusCode({ status: 'Approved', phase: 'Executed' })).toBe(3)
+  })
+  it('maps ApprovedPendingDisbursement to the awaiting-funds code', () => {
+    expect(loanStatusCode({ status: 'ApprovedPendingDisbursement', phase: 'Executed' })).toBe(
+      PROPOSAL_STATUS_AWAITING_FUNDS
+    )
   })
   it('maps Executed status to 5', () => {
     expect(loanStatusCode({ status: 'Executed', phase: 'Executed' })).toBe(5)
