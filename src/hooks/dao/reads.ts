@@ -105,7 +105,6 @@ export function useUserData(): UserData {
         }
       : undefined,
     votingWeight: isMember ? calculateVotingWeight(asBigInt(data?.stakeAmount)) : 0,
-    pendingRewards: asBigInt(data?.pendingYield),
     pendingYield: asBigInt(data?.pendingYield),
     hasActiveLoan: !!m?.has_active_loan,
     loans: (loans ?? []).map(toLoan),

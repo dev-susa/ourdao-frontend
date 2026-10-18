@@ -368,9 +368,9 @@ export function useRewards() {
     queryKeys.daoStats(),
     queryKeys.backendStats(),
   ]
-  const claimRewards = () => run('Claiming rewards', (w) => w.claimRewards(), claimInvalidates)
-  const claimYield = () => run('Claiming yield', (w) => w.claimRewards(), claimInvalidates)
-  return { claimRewards, claimYield, isPending, error, isSuccess, cancelSignature }
+  // Yield is the only claimable amount; claim_rewards pays it out.
+  const claimRewards = () => run('Claiming yield', (w) => w.claimRewards(), claimInvalidates)
+  return { claimRewards, isPending, error, isSuccess, cancelSignature }
 }
 
 export function useStaking() {

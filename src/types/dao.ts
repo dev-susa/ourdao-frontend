@@ -46,7 +46,6 @@ export interface UserData {
   member?: Member
   ensName?: string
   votingWeight: number
-  pendingRewards: bigint
   pendingYield: bigint
   hasActiveLoan: boolean
   loans: Loan[]

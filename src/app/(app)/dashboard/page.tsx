@@ -30,7 +30,7 @@ import { PageHeader } from '@/components/PageHeader'
 export default function DashboardPage() {
   const stats = useDAOStats()
   const userData = useUserData()
-  const { claimRewards, claimYield, isPending, isSuccess } = useRewards()
+  const { claimRewards, isPending, isSuccess } = useRewards()
   const { events, isError: eventsError, refetch: refetchEvents } = useDAOEvents()
   // The redirect decision lives in the shared guard (#307) so it waits for the
   // wallet restore *and* the membership read before acting. Previously the
@@ -44,16 +44,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (isSuccess) {
-      toast.success('Rewards claimed successfully!')
+      toast.success('Yield claimed successfully!')
     }
   }, [isSuccess])
 
-  const handleClaimRewards = async () => {
-    await claimRewards()
-  }
-
   const handleClaimYield = async () => {
-    await claimYield()
+    await claimRewards()
   }
 
   // The "not connected" card is only correct once the restore attempt has
@@ -227,7 +223,7 @@ export default function DashboardPage() {
           {/* Main Content */}
           <div className={`${isMobile ? 'space-y-4' : 'lg:col-span-2 space-y-8'}`}>
             {/* Stats Cards */}
-            <div className={`grid ${getCardGridClass(4)} gap-3 sm:gap-6`}>
+            <div className={`grid ${getCardGridClass(3)} gap-3 sm:gap-6`}>
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center">
@@ -247,27 +243,11 @@ export default function DashboardPage() {
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center">
-                    <div className="p-3 rounded-full bg-green-50 dark:bg-green-950/50 mr-4">
-                      <TrophyIcon className="h-8 w-8 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Pending Rewards</p>
-                      <p className="text-2xl font-bold text-foreground">
-                        {formatToken(userData.pendingRewards)}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center">
                     <div className="p-3 rounded-full bg-purple-50 dark:bg-purple-950/50 mr-4">
                       <ChartBarIcon className="h-8 w-8 text-purple-600 dark:text-purple-400" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Yield Available</p>
+                      <p className="text-sm font-medium text-muted-foreground">Claimable Yield</p>
                       <p className="text-2xl font-bold text-foreground">
                         {formatToken(userData.pendingYield)}
                       </p>
@@ -294,41 +274,26 @@ export default function DashboardPage() {
             </div>
 
             {/* Rewards Section */}
-            {(userData.pendingRewards > BigInt(0) || userData.pendingYield > BigInt(0)) && (
+            {userData.pendingYield > BigInt(0) && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
                     <TrophyIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mr-2" />
-                    Available Rewards
+                    Claimable Yield
                   </CardTitle>
                   <CardDescription>
-                    You have rewards available to claim
+                    You have yield available to claim
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-950/30 rounded-lg">
-                    <div>
-                      <p className="font-medium text-green-900 dark:text-green-300">Governance Rewards</p>
-                      <p className="text-sm text-green-700 dark:text-green-400">{formatToken(userData.pendingRewards)}</p>
-                    </div>
-                    <Button 
-                      onClick={handleClaimRewards} 
-                      disabled={userData.pendingRewards === BigInt(0) || isPending || stats.isPaused}
-                      size="sm"
-                    >
-                      {isPending ? 'Claiming...' : 'Claim'}
-                    </Button>
-                  </div>
-                  
+                <CardContent>
                   <div className="flex items-center justify-between p-4 bg-purple-50 dark:bg-purple-950/30 rounded-lg">
                     <div>
-                      <p className="font-medium text-purple-900 dark:text-purple-300">Restaking Yield</p>
+                      <p className="font-medium text-purple-900 dark:text-purple-300">Yield</p>
                       <p className="text-sm text-purple-700 dark:text-purple-400">{formatToken(userData.pendingYield)}</p>
                     </div>
-                    <Button 
-                      onClick={handleClaimYield} 
-                      disabled={userData.pendingYield === BigInt(0) || isPending || stats.isPaused}
-                      variant="outline"
+                    <Button
+                      onClick={handleClaimYield}
+                      disabled={isPending || stats.isPaused}
                       size="sm"
                     >
                       {isPending ? 'Claiming...' : 'Claim'}
