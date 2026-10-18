@@ -213,24 +213,28 @@ export default function TreasuryPage() {
         <StatCard
           label="Treasury Balance"
           value={token.format(stats.treasuryBalance)}
+          loading={stats.isLoading}
           icon={Landmark}
           tint="bg-primary-50 text-primary-600 dark:bg-primary-950/50 dark:text-primary-400"
         />
         <StatCard
           label="Total Staked"
           value={token.format(stats.totalRestaked)}
+          loading={stats.isLoading}
           icon={Lock}
           tint="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
         />
         <StatCard
           label="Your Stake"
           value={token.format(myStake)}
+          loading={stats.isLoading}
           icon={TrendingUp}
           tint="bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
         />
         <StatCard
           label="Pending Yield"
           value={token.format(userData.pendingYield)}
+          loading={stats.isLoading}
           icon={Gift}
           tint="bg-fuchsia-50 text-fuchsia-600 dark:bg-fuchsia-950/50 dark:text-fuchsia-400"
         />
@@ -241,24 +245,28 @@ export default function TreasuryPage() {
         <StatCard
           label="Interest Collected"
           value={token.format(asBigInt(stats.interestCollected))}
+          loading={stats.isLoading}
           icon={Gift}
           tint="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
         />
         <StatCard
           label="Principal Lent"
           value={token.format(asBigInt(stats.principalLent))}
+          loading={stats.isLoading}
           icon={Banknote}
           tint="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
         />
         <StatCard
           label="Principal Repaid"
           value={token.format(asBigInt(stats.principalRepaid))}
+          loading={stats.isLoading}
           icon={TrendingUp}
           tint="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
         />
         <StatCard
           label="Value Defaulted"
           value={token.format(asBigInt(stats.valueDefaulted))}
+          loading={stats.isLoading}
           icon={TriangleAlert}
           tint="bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"
         />

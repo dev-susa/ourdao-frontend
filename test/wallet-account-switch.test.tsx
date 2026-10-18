@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * Tests for issue #59 — Freighter account switch updates the provider state
  * and invalidates wallet-scoped React Query caches.

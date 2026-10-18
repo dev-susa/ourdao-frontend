@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import axe from 'axe-core'
 import { expect } from 'vitest'
 

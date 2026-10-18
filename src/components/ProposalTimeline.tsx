@@ -26,22 +26,8 @@ export function ProposalTimeline({ kind, id, isPrivate = false, fallbackDates }:
 
   const { timeline, isLoading } = kind === 'loan' ? loanTimeline : treasuryTimeline
 
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center text-lg">
-            <CalendarIcon className="h-5 w-5 mr-2" />
-            Proposal Timeline
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">Loading timeline events...</p>
-        </CardContent>
-      </Card>
-    )
-  }
-
+  // useMemo must be called unconditionally (rules-of-hooks). It handles the
+  // !timeline case itself, so it is safe to place before the isLoading guard.
   const votes = useMemo(() => {
     if (!timeline) return []
     return timeline
@@ -80,6 +66,22 @@ export function ProposalTimeline({ kind, id, isPrivate = false, fallbackDates }:
         }
       })
   }, [timeline, isPrivate])
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center text-lg">
+            <CalendarIcon className="h-5 w-5 mr-2" />
+            Proposal Timeline
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Loading timeline events...</p>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card>

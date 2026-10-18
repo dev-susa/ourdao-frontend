@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * WalletProvider connection and signing flows (#329): session restore,
  * connect failure, every Freighter response shape, signing rejection,

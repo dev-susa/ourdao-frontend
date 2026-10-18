@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { expect, type Page } from '@playwright/test'
 
 export type Theme = 'light' | 'dark'

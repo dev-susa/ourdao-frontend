@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // Covers the three degradation modes the README promises anyone deploying
 // this app: no wallet connected, no NEXT_PUBLIC_CONTRACT_ID, and no reachable
 // backend. Each should render an explicit, defined UI state — not throw, and

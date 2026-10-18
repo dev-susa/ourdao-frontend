@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { backend, BackendError, isBackendConfigured } from '@/lib/backend'
 

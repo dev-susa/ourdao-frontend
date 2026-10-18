@@ -7,7 +7,9 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   test: {
-    environment: 'jsdom',
+    // Default to node; component/hook tests that need a DOM opt in with
+    // @vitest-environment jsdom at the top of the file (closes #373).
+    environment: 'node',
     setupFiles: ['./test/setup.ts'],
     globals: false,
     // Playwright's visual specs live under test/visual and run via

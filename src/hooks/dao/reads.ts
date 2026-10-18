@@ -302,8 +302,8 @@ export function useLoanEligibility(): {
   return { eligibility, isLoading: enabled && isLoading, isError }
 }
 
-export function useDAOStats(): ExtendedStats {
-  const { data, isError: contractError, refetch: refetchContract } = useQuery({
+export function useDAOStats(): ExtendedStats & { isLoading: boolean } {
+  const { data, isLoading: contractLoading, isError: contractError, refetch: refetchContract } = useQuery({
     queryKey: queryKeys.daoStats(),
     enabled: isContractConfigured(),
     queryFn: async () => {
@@ -355,6 +355,7 @@ export function useDAOStats(): ExtendedStats {
     indexerStale: agg?.indexerStale ?? false,
     lastIndexedLedger: agg?.lastIndexedLedger ?? null,
     indexerError,
+    isLoading: contractLoading,
     isError: contractError || indexerError,
     refetch: () => {
       if (contractError) void refetchContract()

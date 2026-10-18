@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * Issue #241 — network-mismatch behaviour is a documented decision with an
  * enforced guard, not an emergent warning.

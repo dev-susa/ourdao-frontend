@@ -8,6 +8,45 @@ import {
 } from '@/lib/stellar'
 import { Networks } from '@stellar/stellar-sdk'
 
+// ── Regression #355: contractIdStatus / isContractConfigured validation ─────
+
+describe('contractIdStatus and isContractConfigured (#355)', () => {
+  // A canonical Soroban contract address (C + 55 base32 chars)
+  const validContractId = 'CA7QYNF7SOWQ3GLR2BGMZEHXR73EWBMGM7OPKJNNOHHEJLBSXMZPQNUD'
+  // Non-empty but fails StrKey.isValidContract — the old startsWith('C') bug
+  const malformedContractId = 'Cabc123'
+
+  it('returns "valid" and isContractConfigured()=true for a canonical contract id', async () => {
+    vi.stubEnv('NEXT_PUBLIC_CONTRACT_ID', validContractId)
+    vi.resetModules()
+    const { contractIdStatus, isContractConfigured } = await import('@/lib/stellar')
+    expect(contractIdStatus()).toBe('valid')
+    expect(isContractConfigured()).toBe(true)
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
+
+  it('returns "invalid" and isContractConfigured()=false for a malformed id that starts with C', async () => {
+    vi.stubEnv('NEXT_PUBLIC_CONTRACT_ID', malformedContractId)
+    vi.resetModules()
+    const { contractIdStatus, isContractConfigured } = await import('@/lib/stellar')
+    expect(contractIdStatus()).toBe('invalid')
+    expect(isContractConfigured()).toBe(false)
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
+
+  it('returns "unconfigured" and isContractConfigured()=false when CONTRACT_ID is empty', async () => {
+    vi.stubEnv('NEXT_PUBLIC_CONTRACT_ID', '')
+    vi.resetModules()
+    const { contractIdStatus, isContractConfigured } = await import('@/lib/stellar')
+    expect(contractIdStatus()).toBe('unconfigured')
+    expect(isContractConfigured()).toBe(false)
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
+})
+
 describe('stellar explorer URL helpers', () => {
   const testContract = 'CBA2B4 Prostitutas5MFL3GBB3UMY464YPY6YP77M3FJRX'
   const testHash = 'abc123def456'

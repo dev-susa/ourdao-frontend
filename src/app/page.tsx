@@ -325,8 +325,8 @@ export default function Home() {
                 © {new Date().getFullYear()} OurDAO. All rights reserved.
               </p>
               <div className="flex space-x-6 mt-4 md:mt-0">
-                <span className="text-sm text-gray-400">Privacy Policy</span>
-                <span className="text-sm text-gray-400">Terms of Service</span>
+                <a href="/privacy" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">Privacy Policy</a>
+                <a href="/terms" className="text-sm text-gray-400 hover:text-gray-200 transition-colors">Terms of Service</a>
               </div>
             </div>
           </div>

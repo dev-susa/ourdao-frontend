@@ -61,6 +61,9 @@ export default function LoanDetailsPage() {
   const { cid: documentCid, refetch: refetchDocument } = useProposalDocument('Loan', loanId)
   const { attach, isPending: attaching } = useAttachDocument()
   const [cidInput, setCidInput] = useState('')
+  // CIDv0 = Qm… (46 chars base58) or CIDv1 = b… (multibase base32, 59+ chars)
+  const CID_RE = /^(Qm[1-9A-HJ-NP-Za-km-z]{44}|b[a-z2-7]{58,})$/
+  const isCidValid = CID_RE.test(cidInput.trim())
   const [repayAmount, setRepayAmount] = useState('')
   const [repayError, setRepayError] = useState<string | null>(null)
 
@@ -599,17 +602,27 @@ export default function LoanDetailsPage() {
                     <p className="text-sm text-muted-foreground">No document attached yet.</p>
                     {userData.isMember && (
                       <div className="flex gap-2">
+                        <div className="flex-1 space-y-1">
                         <input
                           type="text"
                           value={cidInput}
                           onChange={(e) => setCidInput(e.target.value)}
                           placeholder="IPFS CID or content hash…"
                           spellCheck={false}
-                          className="flex-1 rounded-lg border border-input px-3 py-2 font-mono text-sm transition-colors focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                          aria-invalid={cidInput.trim().length > 0 && !isCidValid}
+                          className={`w-full rounded-lg border px-3 py-2 font-mono text-sm transition-colors focus:outline-none focus:ring-2 ${
+                            cidInput.trim().length > 0 && !isCidValid
+                              ? 'border-destructive focus:border-destructive focus:ring-destructive/20'
+                              : 'border-input focus:border-primary-500 focus:ring-primary-500/20'
+                          }`}
                         />
+                        {cidInput.trim().length > 0 && !isCidValid && (
+                          <p className="text-xs text-destructive">Must be a valid CIDv0 (Qm…) or CIDv1 (b…) IPFS content identifier</p>
+                        )}
+                        </div>
                         <Button
                           size="sm"
-                          disabled={attaching || !cidInput.trim() || isPaused}
+                          disabled={attaching || !isCidValid || isPaused}
                           onClick={async () => {
                             try {
                               await attach('Loan', loanId, cidInput)

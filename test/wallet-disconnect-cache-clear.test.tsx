@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * Tests for disconnect cache clearing — verifies that disconnect() clears all
  * cached query data so no member-specific data lingers for the next connection.

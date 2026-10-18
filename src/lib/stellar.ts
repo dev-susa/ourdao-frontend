@@ -1,6 +1,6 @@
 'use client'
 
-import { rpc, Networks } from '@stellar/stellar-sdk'
+import { rpc, Networks, StrKey } from '@stellar/stellar-sdk'
 
 /**
  * Stellar / Soroban network configuration.
@@ -53,8 +53,29 @@ export const getNetworkMismatchMessage = (walletNetwork?: string | null): string
 /** Deployed OurDAO contract id (C...). Empty until a deployment is configured. */
 export const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID || ''
 
-/** Whether a contract id is configured — the UI degrades gracefully without one. */
-export const isContractConfigured = (): boolean => CONTRACT_ID.startsWith('C')
+/**
+ * Three-way contract-id status:
+ * - `'valid'`        — `CONTRACT_ID` passes `StrKey.isValidContract`; live mode enabled.
+ * - `'invalid'`      — `CONTRACT_ID` is non-empty but fails validation (e.g. truncated
+ *                      or mistyped); shows a distinct config-error banner so developers
+ *                      get a clear error instead of cryptic RPC failures.
+ * - `'unconfigured'` — `CONTRACT_ID` is empty; preview / demo mode.
+ */
+export type ContractIdStatus = 'valid' | 'invalid' | 'unconfigured'
+
+export const contractIdStatus = (): ContractIdStatus => {
+  if (!CONTRACT_ID) return 'unconfigured'
+  return StrKey.isValidContract(CONTRACT_ID) ? 'valid' : 'invalid'
+}
+
+/**
+ * Whether a valid contract id is configured.
+ *
+ * Previously used `startsWith('C')` which accepted truncated or mistyped ids
+ * (e.g. `Cabc123`) and caused cryptic RPC failures. Now delegates to
+ * `StrKey.isValidContract` for a strict check (#355).
+ */
+export const isContractConfigured = (): boolean => contractIdStatus() === 'valid'
 
 /**
  * Determines whether a URL points to a local loopback interface.

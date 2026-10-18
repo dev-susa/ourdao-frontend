@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { expect, test } from '@playwright/test'
 import { gotoInTheme, type Theme } from './helpers'
 

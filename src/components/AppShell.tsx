@@ -32,7 +32,7 @@ import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/s
 import { useUserData, useDAOStats } from '@/hooks/useDAO'
 import { buildLabel } from '@/lib/build-info'
 import { isBackendConfigured } from '@/lib/backend'
-import { isContractConfigured } from '@/lib/stellar'
+import { contractIdStatus } from '@/lib/stellar'
 import { cn } from '@/lib/utils'
 import { MAIN_CONTENT_ID } from '@/lib/a11y'
 
@@ -182,7 +182,7 @@ export function AppShell({ children }: AppShellProps) {
         </div>
       </header>
 
-      {!isContractConfigured() && (
+      {contractIdStatus() === 'unconfigured' && (
         <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300 sm:px-6">
           <TriangleAlert className="h-5 w-5 shrink-0" />
           <span>
@@ -191,6 +191,27 @@ export function AppShell({ children }: AppShellProps) {
               NEXT_PUBLIC_CONTRACT_ID
             </code>{' '}
             to enable live data. The app is running in preview mode.
+          </span>
+        </div>
+      )}
+
+      {contractIdStatus() === 'invalid' && (
+        <div
+          data-testid="invalid-contract-id-banner"
+          className="flex items-center gap-2 border-b border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300 sm:px-6"
+        >
+          <TriangleAlert className="h-5 w-5 shrink-0" />
+          <span>
+            Invalid{' '}
+            <code className="rounded bg-red-100 px-1 py-0.5 font-mono text-xs dark:bg-red-900/40">
+              NEXT_PUBLIC_CONTRACT_ID
+            </code>
+            {' '}— the value is set but is not a valid Soroban contract address. All reads
+            and writes will fail. Check your{' '}
+            <code className="rounded bg-red-100 px-1 py-0.5 font-mono text-xs dark:bg-red-900/40">
+              .env
+            </code>{' '}
+            file and redeploy.
           </span>
         </div>
       )}

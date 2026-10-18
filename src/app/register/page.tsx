@@ -192,7 +192,7 @@ export default function RegisterPage() {
                 />
                 <label htmlFor="acceptTerms" className="ml-2 text-sm text-foreground">
                   I accept the{' '}
-                  <a href="/privacy" className="text-primary-600 hover:text-primary-500">
+                  <a href="/terms" className="text-primary-600 hover:text-primary-500">
                     Terms and Conditions
                   </a>{' '}
                   and understand that this payment will register me as a DAO member

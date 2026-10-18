@@ -139,21 +139,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ className = '' 
           aria-label="Notifications"
           className={`p-0 ${isMobile ? 'w-screen rounded-t-xl' : 'w-96'} border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 ${isMobile ? 'max-h-screen' : 'max-h-96'} flex flex-col`}
         >
-      {/* Notification Bell Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-lg hover:bg-accent transition-colors"
-        title="Notifications"
-        aria-label="Toggle notifications"
-      >
-        <Bell className="w-6 h-6" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-            {unreadCount > 99 ? '99+' : unreadCount}
-          </span>
-        )}
-      </button>
-
             {/* Header */}
             <div className="p-4 border-b border-border">
               <div className="flex items-center justify-between mb-3">
