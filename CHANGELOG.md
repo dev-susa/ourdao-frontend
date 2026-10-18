@@ -31,10 +31,15 @@ report can name the entry below it came from. See
   risky change can ship disabled; plus a rollback runbook and a contract
   redeployment checklist (#274, #275, #277).
 
+- Connect with xBull, Albedo, LOBSTR, hardware wallets and more through Stellar Wallets Kit ("More wallets" next to Connect Wallet); Freighter stays the default (#344).
+
 ### Changed
+- Contract method names and argument shapes are now compile-checked against TypeScript bindings generated from the contract wasm (`npm run gen:contract`), and arguments are encoded from the contract spec instead of hand-built. This surfaced and fixes drift: the member join time field is `join_time`, not `join_ledger` (#343).
 - Upgraded `@stellar/stellar-sdk` to `^17.1.0` and added migration plan and testnet smoke verification checklist (#383).
 
 ### Fixed
+- The dashboard shows one claimable yield amount and one claim button instead of the same pending amount as both "rewards" and "yield" (#345).
+- Removed the loan list's Privacy filter, Private stat and purpose search, which could never match anything because loan proposals are public and store no purpose; search now matches borrower address and proposal id, and proposal cards no longer render an empty description (#346).
 - Admin add/remove/threshold/pause failures no longer surface as unhandled promise rejections, and the consensus threshold rejects non-integers before signing (#330).
 - Disabled misleading loan document encryption and access-permission controls,
   clarified that loan and IPFS data are public, and show the submitted amount

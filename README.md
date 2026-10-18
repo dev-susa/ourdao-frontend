@@ -218,7 +218,9 @@ group rather than repeated at each call site.
 |---|---|
 | `src/lib/stellar.ts` | Network config, RPC client, explorer URLs |
 | `src/lib/wallet.tsx` | Freighter connect/disconnect/sign context (`useWallet`) |
-| `src/lib/dao-client.ts` | Soroban read/invoke + typed wrappers for every contract method |
+| `src/lib/dao-client.ts` | Soroban read/invoke + typed wrappers for every contract method, compile-checked against the generated bindings |
+| `src/lib/generated/dao-bindings.ts` | Generated from the contract wasm — do not edit; see `npm run gen:contract` |
+| `src/lib/wallet-adapter.ts` | Stellar Wallets Kit adapter for non-Freighter wallets |
 | `src/components/ConnectButton.tsx` | Freighter connect/disconnect UI |
 | `src/hooks/useDAO.ts` | React Query hooks the pages consume |
 
@@ -284,7 +286,10 @@ npm start         # serve the production build
 npm run lint      # eslint
 npm run typecheck # tsc --noEmit
 npm test          # vitest
+npm run gen:contract -- path/to/ourdao_dao.wasm <contracts-commit>  # regenerate src/lib/generated/dao-bindings.ts
 ```
+
+Run `gen:contract` whenever the contract is redeployed (the wasm is a release asset of `ourdao-contracts`, or `cargo build --target wasm32v1-none --release -p ourdao-dao`), then fix whatever `npm run typecheck` reports: a renamed method or changed argument now fails to compile instead of failing on-chain. Needs the [`stellar` CLI](https://developers.stellar.org/docs/tools/developer-tools/cli/stellar-cli).
 
 ## Testing
 
