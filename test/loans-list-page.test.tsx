@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { renderWithProviders } from './test-utils'
 import LoansPage from '@/app/(app)/loans/page'
 
@@ -110,6 +110,49 @@ describe('LoansPage', () => {
 
     await waitFor(() => expect(screen.getByText('Loan Proposal #1')).toBeInTheDocument())
     expect(screen.getByText(/2/, { selector: 'p.font-semibold' })).toBeInTheDocument()
+  })
+
+  it('offers no controls that filter on fields the app never populates (#346)', async () => {
+    mockGetStats.mockResolvedValue({ totalLoanProposals: 1 })
+    mockGetLoanProposal.mockResolvedValue(rawProposal())
+    renderWithProviders(<LoansPage />)
+
+    await waitFor(() => expect(screen.getByText('Loan Proposal #1')).toBeInTheDocument())
+    expect(screen.queryByLabelText('Privacy')).not.toBeInTheDocument()
+    expect(screen.queryByText('Private Only')).not.toBeInTheDocument()
+    expect(screen.queryByText('Private')).not.toBeInTheDocument()
+    expect(screen.queryByPlaceholderText(/purpose/i)).not.toBeInTheDocument()
+  })
+
+  it('never renders an empty description line for a proposal without a document (#346)', async () => {
+    mockGetStats.mockResolvedValue({ totalLoanProposals: 1 })
+    mockGetLoanProposal.mockResolvedValue(rawProposal())
+    renderWithProviders(<LoansPage />)
+
+    await waitFor(() => expect(screen.getByText('Loan Proposal #1')).toBeInTheDocument())
+    expect(screen.queryByText('Purpose')).not.toBeInTheDocument()
+    expect(screen.queryByText('Supporting document attached')).not.toBeInTheDocument()
+  })
+
+  it('searches by borrower address and by proposal id (#346)', async () => {
+    mockGetStats.mockResolvedValue({ totalLoanProposals: 2 })
+    mockGetLoanProposal.mockImplementation(async (id: number) =>
+      rawProposal({ id, borrower: id === 0 ? 'GAAAAAAA' : 'GBBBBBBB' })
+    )
+    renderWithProviders(<LoansPage />)
+    await waitFor(() => expect(screen.getAllByText(/Loan Proposal #/)).toHaveLength(2))
+
+    const search = screen.getByLabelText('Search')
+    fireEvent.change(search, { target: { value: 'gbbb' } })
+    expect(screen.getAllByText(/Loan Proposal #/)).toHaveLength(1)
+    expect(screen.getByText('Loan Proposal #1')).toBeInTheDocument()
+
+    fireEvent.change(search, { target: { value: '#0' } })
+    expect(screen.getAllByText(/Loan Proposal #/)).toHaveLength(1)
+    expect(screen.getByText('Loan Proposal #0')).toBeInTheDocument()
+
+    fireEvent.change(search, { target: { value: 'nomatch' } })
+    expect(screen.getByText('No proposals found')).toBeInTheDocument()
   })
 
   it('demonstrates the test actually checks something: a proposal the contract read returns null for is excluded, not shown as a blank/broken card', async () => {

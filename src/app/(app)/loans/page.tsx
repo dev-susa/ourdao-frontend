@@ -13,7 +13,6 @@ import {
   CheckCircle,
   XCircle,
   Eye,
-  EyeOff,
   FileText,
 } from 'lucide-react'
 import {
@@ -29,6 +28,7 @@ import { useNow } from '@/hooks/useNow'
 import { formatToken, formatDate, calculatePercentage } from '@/lib/utils'
 import { AddressLink } from '@/components/AddressLink'
 import { PROPOSAL_STATUS_LABELS } from '@/constants'
+import { filterLoanProposals, type LoanStatusFilter } from '@/lib/loan-filters'
 import { PageHeader } from '@/components/PageHeader'
 import type { UserData } from '@/types/dao'
 import { VirtualizedList } from '@/components/ui/virtualized-list'
@@ -111,11 +111,6 @@ function LoanProposalCard({
                 <CardTitle className="text-lg">
                   Loan Proposal #{proposal.id}
                 </CardTitle>
-                {proposal.isPrivate && (
-                  <span title="Private Loan">
-                    <EyeOff className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                  </span>
-                )}
                 {proposal.documentHash && (
                   <span title="Has Documents">
                     <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -138,7 +133,7 @@ function LoanProposalCard({
           <div>
             <p className="text-sm text-muted-foreground">Amount Requested</p>
             <p className="font-semibold">
-              {proposal.isPrivate ? 'Private' : formatToken(proposal.amount)}
+              {formatToken(proposal.amount)}
             </p>
           </div>
           <div>
@@ -155,12 +150,12 @@ function LoanProposalCard({
           </div>
         </div>
 
-        <div>
-          <p className="text-sm text-muted-foreground mb-2">Purpose</p>
-          <p className="text-foreground">
-            {proposal.isPrivate ? 'Details are private' : proposal.purpose}
-          </p>
-        </div>
+        {proposal.documentHash && (
+          <div className="flex items-center text-sm text-muted-foreground">
+            <FileText className="mr-2 h-4 w-4" />
+            Supporting document attached
+          </div>
+        )}
 
         {/* Voting Progress */}
         {proposal.status === 2 && (
@@ -246,45 +241,15 @@ export default function LoansPage() {
   useAnnounceLoad('Loan proposals', isLoading, isError)
   const now = useNow()
 
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<{ status: LoanStatusFilter; search: string }>({
     status: 'all',
-    privacy: 'all',
     search: '',
   })
 
-  const filteredProposals = useMemo(() => {
-    let filtered = proposals
-
-    // Filter by status
-    if (filters.status !== 'all') {
-      const statusMap = {
-        'editing': 1,
-        'voting': 2,
-        'approved': 3,
-        'rejected': 4,
-      }
-      filtered = filtered.filter(p => p.status === statusMap[filters.status as keyof typeof statusMap])
-    }
-
-    // Filter by privacy
-    if (filters.privacy !== 'all') {
-      filtered = filtered.filter(p => {
-        if (filters.privacy === 'public') return !p.isPrivate
-        if (filters.privacy === 'private') return p.isPrivate
-        return true
-      })
-    }
-
-    // Search filter
-    if (filters.search) {
-      filtered = filtered.filter(p =>
-        p.purpose.toLowerCase().includes(filters.search.toLowerCase()) ||
-        p.borrower.toLowerCase().includes(filters.search.toLowerCase())
-      )
-    }
-
-    return filtered
-  }, [filters, proposals])
+  const filteredProposals = useMemo(
+    () => filterLoanProposals(proposals, filters),
+    [filters, proposals]
+  )
 
   const handleVote = async (proposalId: number, support: boolean) => {
     await voteOnProposal(proposalId, support)
@@ -316,34 +281,20 @@ export default function LoansPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
                 <label htmlFor="filter-status" className="text-sm font-medium text-foreground">Status</label>
                 <select
                   id="filter-status"
                   className="w-full rounded-lg border border-input px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
                   value={filters.status}
-                  onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                  onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value as LoanStatusFilter }))}
                 >
                   <option value="all">All Statuses</option>
                   <option value="editing">In Editing</option>
                   <option value="voting">In Voting</option>
                   <option value="approved">Approved</option>
                   <option value="rejected">Rejected</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="filter-privacy" className="text-sm font-medium text-foreground">Privacy</label>
-                <select
-                  id="filter-privacy"
-                  className="w-full rounded-lg border border-input px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
-                  value={filters.privacy}
-                  onChange={(e) => setFilters(prev => ({ ...prev, privacy: e.target.value }))}
-                >
-                  <option value="all">All Types</option>
-                  <option value="public">Public Only</option>
-                  <option value="private">Private Only</option>
                 </select>
               </div>
 
@@ -354,7 +305,7 @@ export default function LoansPage() {
                   <input
                     id="filter-search"
                     type="text"
-                    placeholder="Search by purpose or borrower address..."
+                    placeholder="Search by borrower address or proposal id..."
                     className="w-full rounded-lg border border-input pl-10 pr-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
                     value={filters.search}
                     onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
@@ -422,12 +373,12 @@ export default function LoansPage() {
               <CardContent className="p-6">
                 <div className="flex items-center">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 dark:bg-purple-950/50 mr-4">
-                    <EyeOff className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                    <XCircle className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Private</p>
+                    <p className="text-sm font-medium text-muted-foreground">Rejected</p>
                     <p className="text-2xl font-bold text-foreground">
-                      {proposals.filter(p => p.isPrivate).length}
+                      {proposals.filter(p => p.status === 4).length}
                     </p>
                   </div>
                 </div>
@@ -463,7 +414,7 @@ export default function LoansPage() {
                 <Banknote className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-foreground mb-2">No proposals found</h3>
                 <p className="text-muted-foreground">
-                  {filters.status !== 'all' || filters.privacy !== 'all' || filters.search
+                  {filters.status !== 'all' || filters.search
                     ? 'Try adjusting your filters to see more proposals.'
                     : 'Be the first to request a loan!'}
                 </p>
