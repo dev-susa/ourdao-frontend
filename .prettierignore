@@ -1,0 +1,6 @@
+.next/
+node_modules/
+public/
+bun.lock
+package-lock.json
+test/visual/__screenshots__/
