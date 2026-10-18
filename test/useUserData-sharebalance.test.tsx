@@ -36,7 +36,7 @@ describe('useUserData - shareBalance live treasury claim', () => {
     vi.spyOn(daoRead, 'getMember').mockResolvedValue({
       address: 'GABROWSER123',
       status: 'ActiveMember',
-      join_ledger: 100,
+      join_time: 100,
       contribution: '1000000',
       share_balance: '1000000', // frozen historical fee
       has_active_loan: false,

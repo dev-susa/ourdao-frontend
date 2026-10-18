@@ -64,17 +64,22 @@ describe('daoWrite — method name and ScVal argument types per entrypoint', () 
 
   afterEach(() => vi.clearAllMocks())
 
-  const bytes = new Uint8Array([1, 2, 3, 4])
+  // commit / salt / content hash are BytesN<32> in the contract.
+  const bytes = new Uint8Array(32).fill(4)
   const policy = {
-    minMembershipDuration: 1,
-    membershipContribution: 2,
-    maxLoanDuration: 3,
-    minInterestRate: 4,
-    maxInterestRate: 5,
-    cooldownPeriod: 6,
-    maxLoanToTreasuryRatio: 7,
-    defaultGracePeriod: 8,
-    defaultPenaltyBps: 9,
+    min_membership_duration: BigInt(1),
+    membership_contribution: BigInt(2),
+    max_loan_duration: BigInt(3),
+    min_interest_rate: 4,
+    max_interest_rate: 5,
+    cooldown_period: BigInt(6),
+    max_loan_to_treasury_ratio: 7,
+    default_grace_period: BigInt(8),
+    default_penalty_bps: 9,
+    editing_period: BigInt(10),
+    voting_period: BigInt(11),
+    quorum_bps: 12,
+    treasury_threshold: 13,
   }
 
   // [label, call, expected contract function, expected arg ScVal types]
@@ -82,7 +87,7 @@ describe('daoWrite — method name and ScVal argument types per entrypoint', () 
     ['registerMember', (w) => w.registerMember(), 'register_member', ['scvAddress']],
     ['exitDao', (w) => w.exitDao(), 'exit_dao', ['scvAddress']],
     ['claimRewards', (w) => w.claimRewards(), 'claim_rewards', ['scvAddress']],
-    ['requestLoan', (w) => w.requestLoan(BigInt(100)), 'request_loan', ['scvAddress', 'scvI128']],
+    ['requestLoan', (w) => w.requestLoan(BigInt(100)), 'request_loan', ['scvAddress', 'scvI128', 'scvVoid']],
     ['editLoanProposal', (w) => w.editLoanProposal(1, BigInt(50)), 'edit_loan_proposal', ['scvAddress', 'scvU32', 'scvI128']],
     ['voteOnLoanProposal', (w) => w.voteOnLoanProposal(1, true), 'vote_on_loan_proposal', ['scvAddress', 'scvU32', 'scvBool']],
     ['repayLoan', (w) => w.repayLoan(2), 'repay_loan', ['scvAddress', 'scvU32']],

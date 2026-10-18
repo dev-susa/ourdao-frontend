@@ -20,7 +20,6 @@ import {
   Keypair,
   Transaction,
   TransactionBuilder,
-  nativeToScVal,
   scValToNative,
   rpc,
   xdr,
@@ -32,7 +31,18 @@ import {
   isContractConfigured,
   server,
 } from './stellar'
+import type { Client as ContractClient, MethodOptions } from '@stellar/stellar-sdk/contract'
 import { formatContractError } from './contract-errors'
+import {
+  Client,
+  type Loan,
+  type LoanPolicy,
+  type LoanProposal,
+  type LoanTerms,
+  type Member,
+  type ProposalKind,
+  type TreasuryProposal,
+} from './generated/dao-bindings'
 
 // Multiplier for inclusion fee to survive network congestion.
 // The inclusion fee (stroops/byte) is what validators use to order transactions
@@ -79,68 +89,55 @@ export async function withTimeout<T>(promise: Promise<T>, ms: number, label: str
 }
 
 // ---------------------------------------------------------------------------
-// ScVal argument builders (JS value -> Soroban value with the right type)
+// Compile-checked contract calls
+//
+// Method names and argument shapes come from the generated bindings
+// (`generated/dao-bindings.ts`, produced by `npm run gen:contract`), so a
+// contract rename or signature change fails `tsc` instead of failing at
+// runtime. Arguments are encoded to ScVals from the contract spec embedded in
+// those bindings rather than hand-built.
 // ---------------------------------------------------------------------------
 
-export const sc = {
-  addr: (a: string): xdr.ScVal => new Address(a).toScVal(),
-  i128: (v: bigint | number | string): xdr.ScVal =>
-    nativeToScVal(BigInt(v), { type: 'i128' }),
-  u32: (v: number): xdr.ScVal => nativeToScVal(v, { type: 'u32' }),
-  u64: (v: bigint | number): xdr.ScVal =>
-    nativeToScVal(BigInt(v), { type: 'u64' }),
-  // Booleans map unambiguously to scvBool; nativeToScVal needs no type hint
-  // (there's no 'bool' entry in its ScValType union at all).
-  bool: (v: boolean): xdr.ScVal => nativeToScVal(v),
-  str: (v: string): xdr.ScVal => nativeToScVal(v, { type: 'string' }),
-  bytes: (v: Uint8Array): xdr.ScVal => xdr.ScVal.scvBytes(v as Buffer),
-  vecAddr: (list: string[]): xdr.ScVal =>
-    xdr.ScVal.scvVec(list.map((a) => new Address(a).toScVal())),
-  // ProposalKind is a unit-variant enum: encoded as a single-symbol vector.
-  proposalKind: (kind: 'Loan' | 'Treasury'): xdr.ScVal =>
-    xdr.ScVal.scvVec([xdr.ScVal.scvSymbol(kind)]),
+// Everything on the bindings `Client` that the SDK base class doesn't define.
+export type ContractMethod = Exclude<keyof Client, keyof ContractClient>
+
+type MethodParam<M extends ContractMethod> = Client[M] extends (a: infer A, ...r: never[]) => unknown
+  ? A
+  : never
+
+/** Named-argument object for `M`, or no arguments for parameterless methods. */
+export type CallArgs<M extends ContractMethod> = [MethodParam<M>] extends [MethodOptions | undefined]
+  ? []
+  : [args: MethodParam<M>]
+
+// The spec is identical for every contract id, and constructing the client
+// makes no network request, so placeholders are fine.
+const SPEC_CONTRACT_ID = 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM'
+let specClient: Client | undefined
+
+/** Encodes named contract arguments to ScVals in the contract's parameter order. */
+export function encodeArgs<M extends ContractMethod>(
+  method: M,
+  ...[args]: CallArgs<M>
+): xdr.ScVal[] {
+  specClient ??= new Client({
+    contractId: SPEC_CONTRACT_ID,
+    networkPassphrase: NETWORK_PASSPHRASE,
+    rpcUrl: 'https://localhost',
+  })
+  return specClient.spec.funcArgsToScVals(method, (args ?? {}) as Record<string, unknown>)
 }
 
-export interface LoanPolicyInput {
-  minMembershipDuration: number | bigint
-  membershipContribution: bigint | number | string
-  maxLoanDuration: number | bigint
-  minInterestRate: number
-  maxInterestRate: number
-  cooldownPeriod: number | bigint
-  maxLoanToTreasuryRatio: number
-  defaultGracePeriod: number | bigint
-  defaultPenaltyBps: number
-}
+export type { LoanPolicy, ProposalKind }
 
-export function policyToScVal(p: LoanPolicyInput): xdr.ScVal {
-  return nativeToScVal(
-    {
-      min_membership_duration: BigInt(p.minMembershipDuration),
-      membership_contribution: BigInt(p.membershipContribution),
-      max_loan_duration: BigInt(p.maxLoanDuration),
-      min_interest_rate: p.minInterestRate,
-      max_interest_rate: p.maxInterestRate,
-      cooldown_period: BigInt(p.cooldownPeriod),
-      max_loan_to_treasury_ratio: p.maxLoanToTreasuryRatio,
-      default_grace_period: BigInt(p.defaultGracePeriod),
-      default_penalty_bps: p.defaultPenaltyBps,
-    },
-    {
-      type: {
-        min_membership_duration: ['symbol', 'u64'],
-        membership_contribution: ['symbol', 'i128'],
-        max_loan_duration: ['symbol', 'u64'],
-        min_interest_rate: ['symbol', 'u32'],
-        max_interest_rate: ['symbol', 'u32'],
-        cooldown_period: ['symbol', 'u64'],
-        max_loan_to_treasury_ratio: ['symbol', 'u32'],
-        default_grace_period: ['symbol', 'u64'],
-        default_penalty_bps: ['symbol', 'u32'],
-      },
-    }
-  )
-}
+/**
+ * A contract struct as decoded by `scValToNative`: field names are the
+ * contract's (compile-checked), values are native JS and enums are `[tag]`.
+ */
+export type Raw<T> = { [K in keyof T]?: unknown }
+
+const kind = (k: 'Loan' | 'Treasury'): ProposalKind => ({ tag: k, values: undefined })
+const bytes = (b: Uint8Array): Buffer => Buffer.from(b)
 
 // ---------------------------------------------------------------------------
 // Core read / invoke
@@ -177,12 +174,12 @@ export async function readContract<T = unknown>(
 
 /** Simulate a read-only call and decode the return value. Returns null when no
  * contract is configured or the call yields no value. */
-export async function read<T = unknown>(
-  method: string,
-  ...args: xdr.ScVal[]
+export async function read<M extends ContractMethod, T = unknown>(
+  method: M,
+  ...args: CallArgs<M>
 ): Promise<T | null> {
   if (!isContractConfigured()) return null
-  return readContract<T>(CONTRACT_ID, method, ...args)
+  return readContract<T>(CONTRACT_ID, method, ...encodeArgs(method, ...args))
 }
 
 export interface InvokeResult {
@@ -487,43 +484,42 @@ export async function invoke(
 // ---------------------------------------------------------------------------
 
 export const daoRead = {
-  getTotalMembers: () => read<number>('get_total_members'),
-  getActiveMembers: () => read<number>('get_active_members'),
-  getConsensusThreshold: () => read<number>('get_consensus_threshold'),
-  getTreasuryBalance: () => read<bigint>('get_treasury_balance'),
-  getLoanPolicy: () => read<Record<string, unknown>>('get_loan_policy'),
-  getToken: () => read<string>('get_token'),
-  isPaused: () => read<boolean>('is_paused'),
-  getAdmins: () => read<string[]>('get_admins'),
-  isMember: (addr: string) => read<boolean>('is_member', sc.addr(addr)),
-  isAdmin: (addr: string) => read<boolean>('is_admin', sc.addr(addr)),
-  isEligibleForLoan: (addr: string) =>
-    read<boolean>('is_eligible_for_loan', sc.addr(addr)),
-  getMember: (addr: string) =>
-    read<Record<string, unknown> | null>('get_member', sc.addr(addr)),
-  getPendingYield: (addr: string) =>
-    read<bigint>('get_pending_yield', sc.addr(addr)),
-  getStake: (addr: string) => read<bigint>('get_stake', sc.addr(addr)),
-  getLoan: (id: number) => read<Record<string, unknown> | null>('get_loan', sc.u32(id)),
-  getLoanProposal: (id: number) =>
-    read<Record<string, unknown> | null>('get_loan_proposal', sc.u32(id)),
-  getTreasuryProposal: (id: number) =>
-    read<Record<string, unknown> | null>('get_treasury_proposal', sc.u32(id)),
-  calculateLoanTerms: (amount: bigint | number) =>
-    read<Record<string, unknown>>('calculate_loan_terms', sc.i128(amount)),
-  calculateExitShare: (addr: string) =>
-    read<bigint>('calculate_exit_share', sc.addr(addr)),
-  resolveName: (name: string) => read<string | null>('resolve_name', sc.str(name)),
-  nameOf: (addr: string) => read<string | null>('name_of', sc.addr(addr)),
-  getDocument: (kind: 'Loan' | 'Treasury', id: number) =>
-    read<Uint8Array | null>('get_document', sc.proposalKind(kind), sc.u32(id)),
+  getTotalMembers: (): Promise<number | null> => read('get_total_members'),
+  getActiveMembers: (): Promise<number | null> => read('get_active_members'),
+  getConsensusThreshold: (): Promise<number | null> => read('get_consensus_threshold'),
+  getTreasuryBalance: (): Promise<bigint | null> => read('get_treasury_balance'),
+  getLoanPolicy: (): Promise<Raw<LoanPolicy> | null> => read('get_loan_policy'),
+  getToken: (): Promise<string | null> => read('get_token'),
+  isPaused: (): Promise<boolean | null> => read('is_paused'),
+  getAdmins: (): Promise<string[] | null> => read('get_admins'),
+  isMember: (address: string): Promise<boolean | null> => read('is_member', { address }),
+  isAdmin: (address: string): Promise<boolean | null> => read('is_admin', { address }),
+  isEligibleForLoan: (member: string): Promise<boolean | null> =>
+    read('is_eligible_for_loan', { member }),
+  getMember: (address: string): Promise<Raw<Member> | null> => read('get_member', { address }),
+  getPendingYield: (member: string): Promise<bigint | null> =>
+    read('get_pending_yield', { member }),
+  getStake: (member: string): Promise<bigint | null> => read('get_stake', { member }),
+  getLoan: (id: number): Promise<Raw<Loan> | null> => read('get_loan', { loan_id: id }),
+  getLoanProposal: (id: number): Promise<Raw<LoanProposal> | null> =>
+    read('get_loan_proposal', { proposal_id: id }),
+  getTreasuryProposal: (id: number): Promise<Raw<TreasuryProposal> | null> =>
+    read('get_treasury_proposal', { proposal_id: id }),
+  calculateLoanTerms: (amount: bigint | number): Promise<Raw<LoanTerms> | null> =>
+    read('calculate_loan_terms', { amount: BigInt(amount) }),
+  calculateExitShare: (member: string): Promise<bigint | null> =>
+    read('calculate_exit_share', { member }),
+  resolveName: (name: string): Promise<string | null> => read('resolve_name', { name }),
+  nameOf: (owner: string): Promise<string | null> => read('name_of', { owner }),
+  getDocument: (k: 'Loan' | 'Treasury', id: number): Promise<Uint8Array | null> =>
+    read('get_document', { kind: kind(k), proposal_id: id }),
   // For a private (commit-reveal) treasury proposal this is true as soon as
   // `voter` has committed, not only once revealed — the contract folds both
   // into one bool since a commitment already blocks a second vote. There is
   // no separate view to tell "committed, not yet revealed" apart from
   // "fully voted".
-  hasVoted: (kind: 'Loan' | 'Treasury', proposalId: number, voter: string) =>
-    read<boolean>('has_voted', sc.proposalKind(kind), sc.u32(proposalId), sc.addr(voter)),
+  hasVoted: (k: 'Loan' | 'Treasury', proposalId: number, voter: string): Promise<boolean | null> =>
+    read('has_voted', { kind: kind(k), proposal_id: proposalId, voter }),
 }
 
 /** Standard SEP-41 token contract reads. */
@@ -532,7 +528,7 @@ export const tokenRead = {
   getSymbol: (tokenId: string) => readContract<string>(tokenId, 'symbol'),
   getName: (tokenId: string) => readContract<string>(tokenId, 'name'),
   getBalance: (tokenId: string, userAddr: string) =>
-    readContract<bigint>(tokenId, 'balance', sc.addr(userAddr)),
+    readContract<bigint>(tokenId, 'balance', new Address(userAddr).toScVal()),
 }
 
 // ---------------------------------------------------------------------------
@@ -543,31 +539,46 @@ export function daoWrite(
   address: string,
   signXDR: (xdr: string) => Promise<string>
 ) {
-  const send = (method: string, ...args: xdr.ScVal[]) =>
-    invoke(address, signXDR, method, ...args)
+  const send = <M extends ContractMethod>(method: M, ...args: CallArgs<M>) =>
+    invoke(address, signXDR, method, ...encodeArgs(method, ...args))
 
   return {
-    registerMember: () => send('register_member', sc.addr(address)),
-    exitDao: () => send('exit_dao', sc.addr(address)),
-    claimRewards: () => send('claim_rewards', sc.addr(address)),
+    registerMember: () => send('register_member', { member: address }),
+    exitDao: () => send('exit_dao', { member: address }),
+    claimRewards: () => send('claim_rewards', { member: address }),
 
-    requestLoan: (amount: bigint | number) =>
-      send('request_loan', sc.addr(address), sc.i128(amount)),
+    // `metadataCid` is the optional off-chain metadata pointer the contract
+    // stores with the proposal.
+    requestLoan: (amount: bigint | number, metadataCid?: string) =>
+      send('request_loan', {
+        borrower: address,
+        amount: BigInt(amount),
+        metadata_cid: metadataCid,
+      }),
     editLoanProposal: (proposalId: number, newAmount: bigint | number) =>
-      send('edit_loan_proposal', sc.addr(address), sc.u32(proposalId), sc.i128(newAmount)),
+      send('edit_loan_proposal', {
+        borrower: address,
+        proposal_id: proposalId,
+        new_amount: BigInt(newAmount),
+      }),
     voteOnLoanProposal: (proposalId: number, support: boolean) =>
-      send('vote_on_loan_proposal', sc.addr(address), sc.u32(proposalId), sc.bool(support)),
+      send('vote_on_loan_proposal', { voter: address, proposal_id: proposalId, support }),
     repayLoan: (loanId: number) =>
-      send('repay_loan', sc.addr(address), sc.u32(loanId)),
+      send('repay_loan', { borrower: address, loan_id: loanId }),
     // Partial repayment — amount is applied to accrued interest first, then
     // principal; the interest portion is distributed to active members as
     // yield immediately (see contracts/dao/src/loans.rs). Rejects amount
     // <= 0 or amount > outstanding balance.
     repayLoanPartial: (loanId: number, amount: bigint | number) =>
-      send('repay_loan_partial', sc.addr(address), sc.u32(loanId), sc.i128(amount)),
+      send('repay_loan_partial', {
+        borrower: address,
+        loan_id: loanId,
+        amount: BigInt(amount),
+      }),
     // Permissionless: the contract takes no caller argument (anyone can
     // trigger this once a loan is overdue past its grace period).
-    markLoanDefaulted: (loanId: number) => send('mark_loan_defaulted', sc.u32(loanId)),
+    markLoanDefaulted: (loanId: number) =>
+      send('mark_loan_defaulted', { loan_id: loanId }),
 
     proposeTreasuryWithdrawal: (
       amount: bigint | number,
@@ -575,51 +586,61 @@ export function daoWrite(
       reason: string,
       isPrivate: boolean
     ) =>
-      send(
-        'propose_treasury_withdrawal',
-        sc.addr(address),
-        sc.i128(amount),
-        sc.addr(destination),
-        sc.str(reason),
-        sc.bool(isPrivate)
-      ),
+      send('propose_treasury_withdrawal', {
+        proposer: address,
+        amount: BigInt(amount),
+        destination,
+        reason,
+        private: isPrivate,
+      }),
     voteOnTreasuryProposal: (proposalId: number, support: boolean) =>
-      send('vote_on_treasury_proposal', sc.addr(address), sc.u32(proposalId), sc.bool(support)),
+      send('vote_on_treasury_proposal', {
+        voter: address,
+        proposal_id: proposalId,
+        support,
+      }),
 
     stake: (amount: bigint | number) =>
-      send('stake', sc.addr(address), sc.i128(amount)),
+      send('stake', { member: address, amount: BigInt(amount) }),
     unstake: (amount: bigint | number) =>
-      send('unstake', sc.addr(address), sc.i128(amount)),
+      send('unstake', { member: address, amount: BigInt(amount) }),
 
-    registerName: (name: string) =>
-      send('register_name', sc.addr(address), sc.str(name)),
+    registerName: (name: string) => send('register_name', { owner: address, name }),
 
     commitTreasuryVote: (proposalId: number, commitment: Uint8Array) =>
-      send('commit_treasury_vote', sc.addr(address), sc.u32(proposalId), sc.bytes(commitment)),
+      send('commit_treasury_vote', {
+        voter: address,
+        proposal_id: proposalId,
+        commitment: bytes(commitment),
+      }),
     revealTreasuryVote: (proposalId: number, support: boolean, salt: Uint8Array) =>
-      send(
-        'reveal_treasury_vote',
-        sc.addr(address),
-        sc.u32(proposalId),
-        sc.bool(support),
-        sc.bytes(salt)
-      ),
+      send('reveal_treasury_vote', {
+        voter: address,
+        proposal_id: proposalId,
+        support,
+        salt: bytes(salt),
+      }),
 
-    attachDocument: (kind: 'Loan' | 'Treasury', proposalId: number, contentHash: Uint8Array) =>
-      send('attach_document', sc.addr(address), sc.proposalKind(kind), sc.u32(proposalId), sc.bytes(contentHash)),
+    attachDocument: (k: 'Loan' | 'Treasury', proposalId: number, contentHash: Uint8Array) =>
+      send('attach_document', {
+        caller: address,
+        kind: kind(k),
+        proposal_id: proposalId,
+        content_hash: bytes(contentHash),
+      }),
 
     // Admin-only entrypoints. The contract itself enforces the admin check
     // (`util::require_admin`) — `address` here is the connected wallet acting
     // as `caller`, not necessarily an admin; a non-admin call simply fails
     // on-chain with NotAdmin.
-    addAdmin: (admin: string) => send('add_admin', sc.addr(address), sc.addr(admin)),
-    removeAdmin: (admin: string) => send('remove_admin', sc.addr(address), sc.addr(admin)),
-    setConsensusThreshold: (thresholdBps: number) =>
-      send('set_consensus_threshold', sc.addr(address), sc.u32(thresholdBps)),
-    setLoanPolicy: (policy: LoanPolicyInput) =>
-      send('set_loan_policy', sc.addr(address), policyToScVal(policy)),
-    pause: () => send('pause', sc.addr(address)),
-    unpause: () => send('unpause', sc.addr(address)),
+    addAdmin: (admin: string) => send('add_admin', { caller: address, admin }),
+    removeAdmin: (admin: string) => send('remove_admin', { caller: address, admin }),
+    setConsensusThreshold: (threshold: number) =>
+      send('set_consensus_threshold', { caller: address, threshold }),
+    setLoanPolicy: (policy: LoanPolicy) =>
+      send('set_loan_policy', { caller: address, policy }),
+    pause: () => send('pause', { caller: address }),
+    unpause: () => send('unpause', { caller: address }),
   }
 }
 

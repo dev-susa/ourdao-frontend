@@ -71,7 +71,7 @@ function member(overrides: Record<string, unknown> = {}) {
   return {
     address: 'GALICE',
     status: 'ActiveMember',
-    join_ledger: 0,
+    join_time: 0,
     contribution: BigInt(0),
     share_balance: BigInt(5_000_0000000),
     has_active_loan: false,

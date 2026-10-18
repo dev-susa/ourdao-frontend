@@ -94,7 +94,7 @@ export function useUserData(): UserData {
       ? {
           memberAddress: String(m.address ?? address),
           status: toMemberStatus(m.status),
-          joinDate: Number(m.join_ledger ?? 0),
+          joinDate: Number(m.join_time ?? 0),
           contributionAmount: asBigInt(m.contribution),
           // Member.share_balance in ourdao-contracts is a dead field (only set at join/exit, never updated).
           // Paired contract issue: https://github.com/Mikey-222/ourdao-contracts/issues/42

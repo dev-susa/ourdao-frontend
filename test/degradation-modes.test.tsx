@@ -83,7 +83,7 @@ function resetDefaults() {
   mockGetMember.mockResolvedValue({
     address: 'GALICE',
     status: 'ActiveMember',
-    join_ledger: 0,
+    join_time: 0,
     contribution: BigInt(0),
     share_balance: BigInt(0),
     has_active_loan: false,

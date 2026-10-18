@@ -23,6 +23,7 @@
     "lhci": "lhci autorun",
     "knip": "knip --no-exit-code",
     "knip:baseline": "node scripts/knip-baseline.mjs",
+    "gen:contract": "bash scripts/gen-contract-bindings.sh",
     "knip:check": "knip --reporter json | node scripts/knip-check.mjs knip-baseline.json"
   },
   "dependencies": {
