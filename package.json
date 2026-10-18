@@ -26,6 +26,7 @@
     "knip:check": "knip --reporter json | node scripts/knip-check.mjs knip-baseline.json"
   },
   "dependencies": {
+    "@creit.tech/stellar-wallets-kit": "2.7.1",
     "@radix-ui/react-avatar": "^1.2.6",
     "@radix-ui/react-dialog": "^1.1.23",
     "@radix-ui/react-dropdown-menu": "^2.1.24",

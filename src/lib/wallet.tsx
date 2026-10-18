@@ -6,6 +6,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react'
@@ -24,6 +25,28 @@ import { useQueryClient } from '@tanstack/react-query'
 import { allWalletScopedQueryKeys } from '@/lib/query-keys'
 import toast from 'react-hot-toast'
 import { NETWORK_PASSPHRASE } from './stellar'
+import { getDefaultWalletAdapter, toError, type WalletAdapter } from './wallet-adapter'
+
+// Remembers that the last session used a Stellar Wallets Kit wallet (anything
+// other than the default Freighter path) so it can be restored on reload.
+const KIT_SESSION_KEY = 'ourdao:wallet-session'
+
+function readKitSession(): boolean {
+  try {
+    return window.localStorage.getItem(KIT_SESSION_KEY) === 'kit'
+  } catch {
+    return false
+  }
+}
+
+function writeKitSession(active: boolean): void {
+  try {
+    if (active) window.localStorage.setItem(KIT_SESSION_KEY, 'kit')
+    else window.localStorage.removeItem(KIT_SESSION_KEY)
+  } catch {
+    /* storage unavailable — the session just won't be restored */
+  }
+}
 
 export const MIN_FREIGHTER_VERSION = '2.0.0'
 
@@ -53,11 +76,14 @@ interface WalletContextValue {
    */
   isRestoring: boolean
   connecting: boolean
+  /** Connects with Freighter, the default wallet. */
   connect: () => Promise<void>
+  /** Opens the Stellar Wallets Kit picker (xBull, Albedo, LOBSTR, hardware wallets, ...). */
+  connectWithKit: () => Promise<void>
   disconnect: () => void
-  /** Signs a base64 transaction XDR with Freighter and returns the signed XDR. */
+  /** Signs a base64 transaction XDR with the connected wallet and returns the signed XDR. */
   signXDR: (xdr: string, options?: { timeoutMs?: number; signal?: AbortSignal }) => Promise<string>
-  /** Signs an arbitrary message with Freighter and returns the base64 signature. */
+  /** Signs an arbitrary message and returns the signature. Rejects if the connected wallet cannot sign messages. */
   signMessage: (message: string) => Promise<string>
   /** True when the connected Freighter wallet's active network differs from this app's configured NETWORK_PASSPHRASE. */
   networkMismatch: boolean
@@ -150,7 +176,22 @@ export function isNetworkMismatch(
 const WALLET_WATCH_INTERVAL_MS = 2000
 const DEFAULT_SIGN_TIMEOUT_MS = 60000
 
-export function WalletProvider({ children }: { children: React.ReactNode }) {
+export function WalletProvider({
+  children,
+  kitAdapter,
+}: {
+  children: React.ReactNode
+  /** Overrides the Stellar Wallets Kit adapter (tests). */
+  kitAdapter?: WalletAdapter
+}) {
+  const kit = useMemo(
+    () => kitAdapter ?? getDefaultWalletAdapter(NETWORK_PASSPHRASE),
+    [kitAdapter]
+  )
+  // True while the connected wallet is a Kit wallet. Freighter-specific polling
+  // and version checks only apply when it is false.
+  const [usingKit, setUsingKit] = useState(false)
+  const usingKitRef = useRef(false)
   const [address, setAddress] = useState<string | null>(null)
   const [connecting, setConnecting] = useState(false)
   // Starts true and flips false as soon as the restore attempt below settles.
@@ -241,6 +282,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setWalletNetwork(null)
       return
     }
+    // Freighter's change watcher doesn't apply to other wallets.
+    if (usingKit) return
 
     let watcher: WatchWalletChanges | null = null
     let isPaused = typeof document !== 'undefined' && document.hidden
@@ -330,7 +373,19 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       stopWatcher()
     }
-  }, [isConnected, queryClient])
+  }, [isConnected, usingKit, queryClient])
+
+  const seedKitNetwork = useCallback(async () => {
+    try {
+      const net = await kit.getNetwork()
+      walletNetworkPassphraseRef.current = net.networkPassphrase || null
+      setWalletNetworkPassphrase(net.networkPassphrase || null)
+      walletNetworkRef.current = net.network || null
+      setWalletNetwork(net.network || null)
+    } catch {
+      /* some wallets don't report their network */
+    }
+  }, [kit])
 
   // Restore a previously-authorized session on mount and seed the wallet's
   // network from Freighter so the mismatch banner appears before the first
@@ -338,6 +393,23 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cancelled = false
     const restore = async () => {
+      if (readKitSession()) {
+        try {
+          const addr = await kit.getAddress()
+          if (cancelled) return
+          if (addr) {
+            usingKitRef.current = true
+            setUsingKit(true)
+            addressRef.current = addr
+            setAddress(addr)
+            await seedKitNetwork()
+            return
+          }
+          writeKitSession(false)
+        } finally {
+          if (!cancelled) setIsRestoring(false)
+        }
+      }
       try {
         const allowed = await isAllowed()
         const isAllowedVal =
@@ -417,7 +489,31 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }
   }, [checkVersion])
 
+  const connectWithKit = useCallback(async () => {
+    setConnecting(true)
+    try {
+      const addr = await kit.connect()
+      usingKitRef.current = true
+      setUsingKit(true)
+      writeKitSession(true)
+      addressRef.current = addr
+      setAddress(addr)
+      await seedKitNetwork()
+    } catch (e) {
+      logger.error('[Wallet] kit connect failed', { error: String(e) })
+      toast.error(`Could not connect wallet: ${toError(e).message}`)
+    } finally {
+      setConnecting(false)
+    }
+  }, [kit, seedKitNetwork])
+
   const disconnect = useCallback(() => {
+    if (usingKitRef.current) {
+      usingKitRef.current = false
+      setUsingKit(false)
+      writeKitSession(false)
+      kit.disconnect().catch(() => {})
+    }
     addressRef.current = null
     setAddress(null)
     walletNetworkPassphraseRef.current = null
@@ -427,7 +523,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     for (const queryKey of allWalletScopedQueryKeys()) {
       queryClient.invalidateQueries({ queryKey })
     }
-  }, [queryClient])
+  }, [kit, queryClient])
 
   const signXDR = useCallback(
     async (xdr: string, options?: { timeoutMs?: number; signal?: AbortSignal }) => {
@@ -444,10 +540,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       const timeoutMs = options?.timeoutMs ?? DEFAULT_SIGN_TIMEOUT_MS
       const signal = options?.signal
       const result = await Promise.race([
-        signTransaction(xdr, {
-          networkPassphrase: NETWORK_PASSPHRASE,
-          address: addressRef.current || undefined,
-        }),
+        usingKitRef.current
+          ? kit.signTransaction(xdr, addressRef.current || '')
+          : signTransaction(xdr, {
+              networkPassphrase: NETWORK_PASSPHRASE,
+              address: addressRef.current || undefined,
+            }),
         new Promise<never>((_, reject) => {
           const timer = setTimeout(() => reject(new Error('Signing timed out')), timeoutMs)
           if (signal) {
@@ -464,7 +562,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       }
       return signedTxXdr
     },
-    []
+    [kit]
   )
 
   const signMessage = useCallback(async (message: string) => {
@@ -473,12 +571,15 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         `Wallet network mismatch: switch Freighter to ${passphraseLabel(NETWORK_PASSPHRASE)} to continue.`
       )
     }
+    if (usingKitRef.current) {
+      return kit.signMessage(message, addressRef.current || '')
+    }
     const result = await freighterSignMessage(message)
     if (typeof result === 'string') return result
     const r = result as { signedMessage?: string; error?: unknown }
     if (r.error) throw new Error(String(r.error))
     return r.signedMessage || ''
-  }, [])
+  }, [kit])
 
   const value: WalletContextValue = {
     address,
@@ -486,6 +587,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     isRestoring,
     connecting,
     connect,
+    connectWithKit,
     disconnect,
     signXDR,
     signMessage,

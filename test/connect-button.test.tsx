@@ -5,6 +5,8 @@ import { ConnectButton } from '@/components/ConnectButton'
 
 const mockConnect = vi.fn()
 const mockDisconnect = vi.fn()
+const mockConnectWithKit = vi.fn()
+let kitAvailable = true
 let mockAddress: string | undefined
 let mockIsConnected = false
 let mockConnecting = false
@@ -17,6 +19,7 @@ vi.mock('@/lib/wallet', () => ({
     connecting: mockConnecting,
     networkMismatch: mockNetworkMismatch,
     connect: mockConnect,
+    connectWithKit: kitAvailable ? mockConnectWithKit : undefined,
     disconnect: mockDisconnect,
     signXDR: vi.fn(),
   }),
@@ -29,6 +32,7 @@ describe('ConnectButton', () => {
     mockIsConnected = false
     mockConnecting = false
     mockNetworkMismatch = false
+    kitAvailable = true
   })
   afterEach(() => vi.clearAllMocks())
 
@@ -38,6 +42,20 @@ describe('ConnectButton', () => {
     fireEvent.click(button)
     expect(mockConnect).toHaveBeenCalledTimes(1)
     expect(mockDisconnect).not.toHaveBeenCalled()
+  })
+
+  it('disconnected: "More wallets" opens the wallet picker, leaving Freighter as the default button', () => {
+    render(<ConnectButton />)
+    fireEvent.click(screen.getByRole('button', { name: 'More wallets' }))
+    expect(mockConnectWithKit).toHaveBeenCalledTimes(1)
+    expect(mockConnect).not.toHaveBeenCalled()
+  })
+
+  it('connected: does not offer "More wallets"', () => {
+    mockAddress = 'GALICEXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+    mockIsConnected = true
+    render(<ConnectButton />)
+    expect(screen.queryByRole('button', { name: 'More wallets' })).not.toBeInTheDocument()
   })
 
   it('connected: shows the shortened address, not "Connect Wallet", and calls disconnect() on click', () => {

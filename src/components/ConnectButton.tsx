@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Wallet connect button backed by the Freighter wallet context. Exposes both
+ * Wallet connect button backed by the wallet context. Exposes both
  * a plain <ConnectButton /> and a <ConnectButton.Custom> render-prop variant
  * for pages that need custom layout around the connect/account state.
  */
@@ -20,7 +20,7 @@ interface CustomRenderProps {
 }
 
 function ConnectButton() {
-  const { address, isConnected, connect, disconnect, connecting } = useWallet()
+  const { address, isConnected, connect, connectWithKit, disconnect, connecting } = useWallet()
 
   if (isConnected && address) {
     return (
@@ -30,9 +30,16 @@ function ConnectButton() {
     )
   }
   return (
-    <Button onClick={connect} disabled={connecting}>
-      {connecting ? 'Connecting…' : 'Connect Wallet'}
-    </Button>
+    <div className="flex items-center gap-1">
+      <Button onClick={connect} disabled={connecting}>
+        {connecting ? 'Connecting…' : 'Connect Wallet'}
+      </Button>
+      {connectWithKit && (
+        <Button variant="ghost" size="sm" onClick={connectWithKit} disabled={connecting}>
+          More wallets
+        </Button>
+      )}
+    </div>
   )
 }
 
