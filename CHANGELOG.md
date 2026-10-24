@@ -36,6 +36,7 @@ report can name the entry below it came from. See
 ### Changed
 - Dependency audit: `uuid` is pinned via a `package.json` `overrides` entry inside `jayson`, clearing the `uuid` advisory that arrived with the optional HOT wallet SDK. The findings that remain — `stream-json` (no compatible fixed version; jayson needs its `streamers/StreamValues` subpath) and the rest of the HOT subtree — are allowlisted in `audit-ci.jsonc` with an expiry and a reachability note, and a bundle check asserts that subtree is absent from client chunks (#478).
 - Contract method names and argument shapes are now compile-checked against TypeScript bindings generated from the contract wasm (`npm run gen:contract`), and arguments are encoded from the contract spec instead of hand-built. This surfaced and fixes drift: the member join time field is `join_time`, not `join_ledger` (#343).
+- Backend stats and loan response types are derived from ourdao-backend's OpenAPI spec (`npm run gen:backend`), and CI fails if the generated file is stale. Two fields are still hand-written until the spec is fixed (#343).
 - Upgraded `@stellar/stellar-sdk` to `^17.1.0` and added migration plan and testnet smoke verification checklist (#383).
 
 ### Fixed
