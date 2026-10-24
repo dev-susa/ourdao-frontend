@@ -45,6 +45,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci --ignore-scripts
+      - name: Fail if generated backend types are stale (#343)
+        run: npm run gen:backend -- --check
       - run: npm run typecheck
 
   test:

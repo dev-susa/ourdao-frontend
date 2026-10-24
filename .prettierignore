@@ -4,3 +4,4 @@ public/
 bun.lock
 package-lock.json
 test/visual/__screenshots__/
+src/lib/generated/

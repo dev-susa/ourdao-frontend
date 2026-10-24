@@ -1,0 +1,1211 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "OurDAO Backend API",
+    "description": "Off-chain indexer + read API for the OurDAO lending DAO on Stellar/Soroban",
+    "version": "0.2.0"
+  },
+  "components": {
+    "schemas": {}
+  },
+  "paths": {
+    "/api/stream": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/auth/challenge": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/members": {
+      "get": {
+        "summary": "Array of members",
+        "tags": [
+          "Members"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Maximum number of members to return"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "description": "Pagination cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/members/{address}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "address",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/members/{address}/summary": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "address",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/members/{address}/activity": {
+      "get": {
+        "summary": "A member's cross-entity activity feed",
+        "tags": [
+          "Members"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Max rows to return (1-200, default 50)."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "description": "Pagination cursor: return rows from ledgers strictly below this value."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "joined",
+                "exited",
+                "claimed",
+                "staked",
+                "unstaked",
+                "name_reg",
+                "loan_req",
+                "loan_edit",
+                "loan_vote",
+                "loan_appr",
+                "loan_rpy",
+                "loan_dflt",
+                "loan_exp",
+                "tre_vote",
+                "committed",
+                "revealed"
+              ]
+            },
+            "in": "query",
+            "name": "symbol",
+            "required": false,
+            "description": "Narrow the feed to one activity kind (issue #193). Must be one of the member-activity symbols; anything else is a 400."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "address",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/proposals/loan": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "description": "Filter by proposal status (e.g. pending, approved, rejected, cancelled, approved_pending_disbursement)"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "borrower",
+            "required": false,
+            "description": "Filter by borrower Stellar address"
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Maximum number of proposals to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/proposals/loan/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Unique proposal id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          },
+          "404": {
+            "description": "Loan proposal not found"
+          }
+        }
+      }
+    },
+    "/api/loans": {
+      "get": {
+        "summary": "Array of loans",
+        "tags": [
+          "Loans"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "repaid",
+                "defaulted"
+              ]
+            },
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "description": "Filter by loan status"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "borrower",
+            "required": false,
+            "description": "Filter by borrower Stellar address"
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Maximum number of loans to return"
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "description": "Pagination cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "borrower": {
+                        "type": "string"
+                      },
+                      "amount": {
+                        "type": "string"
+                      },
+                      "outstanding": {
+                        "type": "string"
+                      },
+                      "total_repayment": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "active",
+                          "repaid",
+                          "defaulted"
+                        ]
+                      },
+                      "approved_ledger": {
+                        "type": "integer",
+                        "nullable": true
+                      },
+                      "due_time": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "repaid_ledger": {
+                        "type": "integer",
+                        "nullable": true
+                      },
+                      "defaulted_ledger": {
+                        "type": "integer",
+                        "nullable": true
+                      },
+                      "updated_at": {
+                        "type": "string"
+                      },
+                      "interest_charge": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "repaid_amount": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "repayment_progress_bps": {
+                        "type": "integer",
+                        "nullable": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/loans/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/loans/{id}/timeline": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/proposals/treasury": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "description": "Filter by proposal status (e.g. pending, executed, rejected, approved_pending_disbursement)"
+          },
+          {
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Maximum number of proposals to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/proposals/treasury/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Unique proposal id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          },
+          "404": {
+            "description": "Treasury proposal not found"
+          }
+        }
+      }
+    },
+    "/api/proposals/treasury/{id}/timeline": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/notifications": {
+      "get": {
+        "summary": "Array of notifications",
+        "tags": [
+          "Notifications"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "address": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "success",
+                          "error",
+                          "warning",
+                          "info"
+                        ]
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "message": {
+                        "type": "string"
+                      },
+                      "ledger": {
+                        "type": "integer",
+                        "nullable": true
+                      },
+                      "tx_hash": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "read": {
+                        "type": "boolean"
+                      },
+                      "event_id": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "created_at": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events": {
+      "get": {
+        "summary": "Paginated event feed",
+        "tags": [
+          "Events"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "ledger": {
+                        "type": "integer"
+                      },
+                      "closed_at": {
+                        "type": "string"
+                      },
+                      "contract_id": {
+                        "type": "string"
+                      },
+                      "symbol": {
+                        "type": "string"
+                      },
+                      "topics": {},
+                      "data": {},
+                      "tx_hash": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "decode_error": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "created_at": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifications/{id}/read": {
+      "patch": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/notifications/read-all": {
+      "patch": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/admin/log": {
+      "get": {
+        "summary": "Admin/governance audit log",
+        "tags": [
+          "admin"
+        ],
+        "description": "Raw events for admin/governance-lifecycle symbols only (init, admin add/remove, threshold, policy, pause/unpause) — a public audit trail read straight off the chain. Optionally scoped to one contract deployment.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Max rows to return (1-200, default 50)."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "description": "Pagination cursor: return rows with a strictly smaller ledger than this value."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "contract",
+            "required": false,
+            "description": "Restrict to one contract deployment id."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "ledger": {
+                        "type": "integer"
+                      },
+                      "closed_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "contract_id": {
+                        "type": "string"
+                      },
+                      "symbol": {
+                        "type": "string"
+                      },
+                      "topics": {},
+                      "data": {},
+                      "tx_hash": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "decode_error": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/interest": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/documents": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/admin/failed-events": {
+      "get": {
+        "summary": "Quarantined (deterministically-failed) events",
+        "tags": [
+          "admin"
+        ],
+        "description": "Events whose fold handler threw deterministically and were isolated rather than retried forever (issue #43) — the operator-facing view of the quarantine. Never includes the raw exception text; that is logged, not returned, so this endpoint stays safe to leave unauthenticated.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "description": "Max rows to return (1-200, default 50)."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "description": "Pagination cursor: return rows with a strictly smaller id than this value."
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "in": "query",
+            "name": "unresolved",
+            "required": false,
+            "description": "When \"true\", only rows a reindex/replay has not yet resolved."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "symbol",
+            "required": false,
+            "description": "Only failures of events with this symbol (issue #192)."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "from_ledger",
+            "required": false,
+            "description": "Only failures from this ledger onwards (issue #192)."
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "name": "to_ledger",
+            "required": false,
+            "description": "Only failures up to and including this ledger (issue #192). With from_ledger, the range may span at most 10000 ledgers."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "headers": {
+              "x-total-count": {
+                "schema": {
+                  "type": "integer"
+                },
+                "description": "Rows matching every filter except the before cursor: the size of the whole quarantine, however far the page is (issue #192)."
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "event_id": {
+                        "type": "string"
+                      },
+                      "symbol": {
+                        "type": "string"
+                      },
+                      "ledger": {
+                        "type": "integer"
+                      },
+                      "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "resolved_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/failed-events/{id}/re-evaluate": {
+      "post": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/admin/failed-events/batch-resolve": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/admin/clear-reorg": {
+      "post": {
+        "summary": "Clear reorg halt",
+        "tags": [
+          "admin"
+        ],
+        "description": "Acknowledges a recorded ledger discontinuity without rebuilding. Clears uncleared reorg halts and records the action into admin_audit_log (issue #402).",
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/admin/audit-log": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/api/stats": {
+      "get": {
+        "summary": "DAO statistics",
+        "tags": [
+          "Stats"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "totalMembers": {
+                      "type": "integer"
+                    },
+                    "activeMembers": {
+                      "type": "integer"
+                    },
+                    "totalLoanProposals": {
+                      "type": "integer"
+                    },
+                    "totalLoans": {
+                      "type": "integer"
+                    },
+                    "activeLoans": {
+                      "type": "integer"
+                    },
+                    "defaultedLoans": {
+                      "type": "integer"
+                    },
+                    "totalDefaultedValue": {
+                      "type": "string"
+                    },
+                    "totalTreasuryProposals": {
+                      "type": "integer"
+                    },
+                    "totalStaked": {
+                      "type": "string"
+                    },
+                    "totalContribution": {
+                      "type": "string"
+                    },
+                    "stakingRatio": {
+                      "type": "number"
+                    },
+                    "interestCollected": {
+                      "type": "string"
+                    },
+                    "principalLent": {
+                      "type": "string"
+                    },
+                    "principalRepaid": {
+                      "type": "string"
+                    },
+                    "valueDefaulted": {
+                      "type": "string"
+                    },
+                    "quarantinedEvents": {
+                      "type": "integer"
+                    },
+                    "connectedStreams": {
+                      "type": "integer"
+                    },
+                    "notificationFailures": {
+                      "type": "integer"
+                    },
+                    "reorgHalt": {
+                      "type": "object",
+                      "properties": {
+                        "reason": {
+                          "type": "string"
+                        },
+                        "detail": {
+                          "type": "string"
+                        }
+                      },
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stats/history": {
+      "get": {
+        "summary": "Historical daily loan aggregates",
+        "tags": [
+          "Stats"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "date",
+                          "principalLent",
+                          "principalRepaid",
+                          "defaults",
+                          "valueDefaulted",
+                          "cumulativeDefaultRatePercent"
+                        ],
+                        "properties": {
+                          "date": {
+                            "type": "string",
+                            "format": "date"
+                          },
+                          "principalLent": {
+                            "type": "string"
+                          },
+                          "principalRepaid": {
+                            "type": "string"
+                          },
+                          "defaults": {
+                            "type": "integer"
+                          },
+                          "valueDefaulted": {
+                            "type": "string"
+                          },
+                          "cumulativeDefaultRatePercent": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/health/dependencies": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/version": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/ready": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:4000",
+      "description": "Development server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "health",
+      "description": "Service health and readiness endpoints"
+    },
+    {
+      "name": "stats",
+      "description": "Aggregate statistics"
+    },
+    {
+      "name": "members",
+      "description": "DAO member operations"
+    },
+    {
+      "name": "loans",
+      "description": "Loan and loan proposal operations"
+    },
+    {
+      "name": "treasury",
+      "description": "Treasury proposal operations"
+    },
+    {
+      "name": "notifications",
+      "description": "Member notifications"
+    },
+    {
+      "name": "events",
+      "description": "Raw event feed"
+    },
+    {
+      "name": "admin",
+      "description": "Admin and governance operations"
+    },
+    {
+      "name": "auth",
+      "description": "Authentication operations"
+    },
+    {
+      "name": "documents",
+      "description": "Proposal document attachments"
+    },
+    {
+      "name": "interest",
+      "description": "Interest distribution history"
+    }
+  ]
+}
