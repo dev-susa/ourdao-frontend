@@ -22,6 +22,7 @@
  */
 import { AuthError, buildAuthHeader, requestSignedAuth, type AuthFailureReason, type AuthSigner, type SignedAuth } from './backend-auth'
 import { BACKEND_URL, isBackendConfigured } from './backend-config'
+import type { paths } from './generated/backend-api'
 
 export { BACKEND_URL, isBackendConfigured }
 
@@ -45,42 +46,45 @@ export interface BackendReady {
   lastIndexedLedger?: number | null
 }
 
-export interface BackendStats {
-  totalMembers: number
-  activeMembers: number
-  totalLoanProposals: number
-  totalLoans: number
-  activeLoans: number
-  defaultedLoans: number
-  totalTreasuryProposals: number
-  totalStaked: string
+type StatsBody = paths['/api/stats']['get']['responses']['200']['content']['application/json']
+type LoanItem = paths['/api/loans']['get']['responses']['200']['content']['application/json'][number]
+
+/**
+ * Stats fields the app reads that ourdao-backend's DAOStats type returns but the
+ * committed openapi.json does not declare yet. Remove each one once the spec
+ * includes it (#343).
+ */
+interface BackendStatsSpecGap {
   lastIndexedLedger: number | null
   secondsSinceUpdate: number | null
   indexerStale: boolean
-  totalDefaultedValue: string
-  interestCollected: string
-  principalLent: string
-  principalRepaid: string
-  valueDefaulted: string
-  quarantinedEvents?: number
 }
 
-// Verified against LoanRow and /api/loans withLoanDerived route in ourdao-backend @ 7620d26
-export interface BackendLoan {
-  id: number
-  borrower: string
-  amount: string
-  outstanding: string
-  total_repayment: string
-  due_time: number | null
-  status: 'active' | 'repaid' | 'defaulted'
-  approved_ledger: number | null
-  repaid_ledger: number | null
-  defaulted_ledger: number | null
-  updated_at: string
-  interest_charge?: string | null
-  repaid_amount?: string | null
-}
+/** Stats fields the app has always treated as optional; the spec declares them required. */
+type OptionalStatsFields =
+  | 'quarantinedEvents'
+  | 'totalContribution'
+  | 'stakingRatio'
+  | 'connectedStreams'
+  | 'notificationFailures'
+  | 'reorgHalt'
+
+/** Generated from /api/stats in src/lib/generated/backend-api.ts, plus the spec gap above. */
+export type BackendStats = Required<Omit<StatsBody, OptionalStatsFields>> &
+  BackendStatsSpecGap &
+  Partial<Pick<StatsBody, OptionalStatsFields>>
+
+/**
+ * Generated from /api/loans in src/lib/generated/backend-api.ts. `due_time` is
+ * overridden: the app reads it as a ledger timestamp number, but the spec types it
+ * as a string, so the spec needs fixing before this override can go (#343).
+ */
+export type BackendLoan = Required<
+  Omit<LoanItem, 'due_time' | 'interest_charge' | 'repaid_amount' | 'repayment_progress_bps'>
+> &
+  Pick<LoanItem, 'interest_charge' | 'repaid_amount' | 'repayment_progress_bps'> & {
+    due_time: number | null
+  }
 
 export interface BackendNotification {
   id: number
